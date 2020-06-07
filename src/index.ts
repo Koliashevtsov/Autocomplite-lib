@@ -24,8 +24,6 @@ class DataApi {
 
       const res = await fetch(this.url + term, this.metaData);
       const data = await res.json();
-      console.log(data);
-
       return data.results.organic_results;
 
     } catch (error) {
@@ -37,10 +35,12 @@ class DataApi {
 class Container {
   results: Result[];
   container: HTMLDivElement;
+  loading: boolean;
 
   constructor(){
     this.results = [];
-    this.container = this.container = document.createElement('div')
+    this.container = this.container = document.createElement('div');
+    this.loading = false;
   }
 
   async request(text: string){
@@ -48,6 +48,7 @@ class Container {
     const data = await dataApi.getDataFromApi(text);
     if(typeof(data) == 'object'){
       this.results = data;
+      this.loading = false;
       return 'list data'
     }
   }
@@ -67,15 +68,21 @@ class Container {
       this.container.appendChild(el)
     });
   }
+  addSpiner(){
+    const el = document.createElement('div');
+    el.innerHTML = 'loading';
+  }
   clearContainer(){
-    this.container.querySelectorAll('*').forEach(n => n.remove())
+    this.container.querySelectorAll('*').forEach(n => n.remove());
+    this.loading = true;
   }
 
   async render(e: Event, text: string){
-    const r: string = await this.request(text);
+    let resData: string;
     this.addContainerToDOM(e);
-    this.clearContainer()
-    if(r == 'list data'){
+    this.clearContainer();
+    resData = await this.request(text);
+    if(resData == 'list data'){
       this.addItemsToContainer(e)
     }
   }
