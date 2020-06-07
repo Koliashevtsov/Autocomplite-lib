@@ -1,41 +1,95 @@
+interface Result {
+    url: string,
+    title: string,
+    rank: number
+}
+
+class DataApi {
+  url: string;
+  metaData: any;
+
+  constructor(){
+    this.url = "https://google-search5.p.rapidapi.com/search-results/?limit=50&ua=desktop&gl=us&hl=en-US&q=";
+    this.metaData = {
+	    "method": "GET",
+	    "headers": {
+		  "x-rapidapi-host": "google-search5.p.rapidapi.com",
+		  "x-rapidapi-key": "34a8793423msh64cd50af002efdap10ae6ajsnbfa8f08db801"
+	    }
+    }
+  }
+
+  async getDataFromApi(term: string): Promise<Array<Result> | string>{
+    try {
+
+      const res = await fetch(this.url + term, this.metaData);
+      const data = await res.json();
+      console.log(data);
+
+      return data.results.organic_results;
+
+    } catch (error) {
+      if(error) return error.message
+    }
+  }
+}
+
 class Container {
-  results: string[];
+  results: Result[];
   container: HTMLDivElement;
 
-  constructor(items: string[]){
-    this.results = items;
+  constructor(){
+    this.results = [];
     this.container = this.container = document.createElement('div')
   }
 
-  request(text: string): void{
-    this.results.push(text)
+  async request(text: string){
+    const dataApi = new DataApi();
+    const data = await dataApi.getDataFromApi(text);
+    if(typeof(data) == 'object'){
+      this.results = data;
+      return 'list data'
+    }
   }
-
-  render(e: Event): void {
-    this.results.forEach(i => {
-      const el = document.createElement('div');
-      el.innerHTML = i;
-      this.container.appendChild(el)
-      this.container.className = "container"
-    });
+  addContainerToDOM(e: Event){
     const parentNode = (<HTMLInputElement>e.target).parentNode;
-    parentNode.appendChild(this.container);
     (<HTMLDivElement>parentNode).style.position = 'relative';
+    parentNode.appendChild(this.container);
     this.container.style.position = 'absolute';
     this.container.style.top = '100%';
+    this.container.className = "container"
+  }
+
+  addItemsToContainer(e: Event){
+    this.results.forEach(i => {
+      const el = document.createElement('div');
+      el.innerHTML = i.title;
+      this.container.appendChild(el)
+    });
+  }
+  clearContainer(){
+    this.container.querySelectorAll('*').forEach(n => n.remove())
+  }
+
+  async render(e: Event, text: string){
+    const r: string = await this.request(text);
+    this.addContainerToDOM(e);
+    this.clearContainer()
+    if(r == 'list data'){
+      this.addItemsToContainer(e)
+    }
   }
 }
 
 class ElementsSubscribe extends Container {
   elements: HTMLElement[];
   constructor(...elements: HTMLElement[]){
-    super([])
+    super()
     this.elements = elements;
   }
   eventCallback(e: Event): void{
     const inputText: string = (<HTMLInputElement>e.target).value;
-    super.request(inputText);
-    super.render(e)
+    super.render(e, inputText)
   }
   listen(event: string){
     this.elements.forEach(i => i.addEventListener(event, this.eventCallback.bind(this)))
